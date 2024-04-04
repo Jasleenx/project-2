@@ -1,0 +1,168 @@
+import pygame
+import random
+
+
+pygame.init()
+
+# Screen dimensions
+screen_width = 1500
+screen_height = 750
+screen = pygame.display.set_mode((screen_width, screen_height))
+
+# Colors
+BLACK = (0, 0, 0 )
+PURPLE = (255, 0, 255)
+GREEN = (0, 255, 0)
+BLUE = (0, 255, 255)
+
+# Player properties
+car_image = pygame.image.load('car_png.bmp')
+new_width = 130
+new_height = 150
+car_image = pygame.transform.scale(car_image,(new_width, new_height))
+# Car properties
+car_size = car_image.get_rect().size
+car_pos = [screen_width // 2, screen_height - car_size[1]]
+car_speed = 50
+
+# Enemy properties
+enemy_size = 50
+enemy_pos = [random.randint(0, screen_width - enemy_size), 0]
+enemy_color = PURPLE
+enemy_list = [enemy_pos]
+
+# Bullet properties
+bullet_size = 20
+bullet_color = BLUE
+bullet_list = []
+
+# Game variables
+score = 0
+clock = pygame.time.Clock()
+game_over = False
+
+# Speed
+enemy_speed = 40
+bullet_speed = 50
+
+def drop_enemies(enemy_list):
+    delay = random.random()
+    if len(enemy_list) < 10 and delay < 0.1:
+        x_pos = random.randint(0, screen_width - enemy_size)
+        y_pos = 0
+        enemy_list.append([x_pos, y_pos])
+
+def draw_enemies(enemy_list):
+    for enemy_pos in enemy_list:
+        pygame.draw.rect(screen, enemy_color, (enemy_pos[0], enemy_pos[1], enemy_size, enemy_size))
+
+def update_enemy_positions(enemy_list, score):
+    for idx, enemy_pos in enumerate(enemy_list):
+        if enemy_pos[1] >= 0 and enemy_pos[1] < screen_height:
+            enemy_pos[1] += enemy_speed
+        else:
+            enemy_list.pop(idx)
+            score += 1
+    return score
+
+def collision_check(enemy_list, car_pos, bullet_pos ):
+    for enemy_pos in enemy_list[:]:
+
+            if detect_collision(enemy_pos, car_pos):
+                return True        
+            for bullet_pos in bullet_list [:]:
+                if detect_collision(bullet_pos,enemy_pos):
+                    bullet_list.remove(bullet_pos)
+                    enemy_list.remove(enemy_pos)
+        
+    return False
+
+def detect_collision(object1_pos, object2_pos):
+    p_x = object1_pos[0]
+    p_y = object1_pos[1]
+
+    e_x = object2_pos[0]
+    e_y = object2_pos[1]
+
+    if (e_x >= p_x and e_x < (p_x + car_size[0])) or (p_x >= e_x and p_x < (e_x + enemy_size)):
+        if (e_y >= p_y and e_y < (p_y + car_size[1])) or (p_y >= e_y and p_y < (e_y + enemy_size)):
+            return True
+    return False
+
+def shoot_bullet(bullet_list, player_pos):
+    bullet_pos = [player_pos[0] + car_size[0] // 2, player_pos[1]]
+    bullet_list.append(bullet_pos)
+
+def update_bullet_positions(bullet_list):
+    for bullet_pos in bullet_list:
+        bullet_pos[1] -= bullet_speed
+
+def remove_off_screen_bullets(bullet_list):
+    bullet_list[:] = [bullet for bullet in bullet_list if bullet[1] > 0]
+
+while not game_over:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            game_over = True
+
+        if event.type == pygame.KEYDOWN:  
+            if event.key == pygame.K_LEFT and car_pos[0] > 0:
+                car_pos[0] -= car_speed
+            elif event.key == pygame.K_RIGHT and car_pos[0] < screen_width - car_size[0]:
+                car_pos[0] += car_speed
+            elif event.key == pygame.K_SPACE:
+                shoot_bullet(bullet_list, car_pos)
+        
+    
+    if game_over:
+         screen.fill(BLACK)  
+         font = pygame.font.SysFont("monospace", 75)
+        
+        # Render "Game Over" text
+         game_over_text = font.render("Game Over", True, (255, 255, 255))
+         game_over_rect = game_over_text.get_rect(center=(screen_width/2, screen_height/2 - 40))
+         screen.blit(game_over_text, game_over_rect)
+        
+        # Render score text
+         score_text = font.render(f'Score: {score}', True, (255, 255, 255))
+         score_rect = score_text.get_rect(center=(screen_width/2, screen_height/2 + 40))
+         screen.blit(score_text, score_rect)
+        
+    pygame.display.update()  
+    pygame.time.wait(300)
+        
+    screen.fill(BLACK)
+
+    # Update enemy positions
+    drop_enemies(enemy_list)
+    score = update_enemy_positions(enemy_list, score)
+    if collision_check(enemy_list, car_pos, bullet_list):
+        game_over = True
+
+    draw_enemies(enemy_list)
+
+    # Update bullet positions
+    update_bullet_positions(bullet_list)
+    remove_off_screen_bullets(bullet_list)
+
+    # Draw bullets
+    for bullet_pos in bullet_list:
+        pygame.draw.rect(screen, bullet_color, (bullet_pos[0], bullet_pos[1], bullet_size, bullet_size))
+
+    # Draw player
+    screen.blit(car_image, car_pos)
+
+    # Display score
+    font = pygame.font.SysFont("monospace", 35)
+    score_color = (255, 255, 255)  
+    score_text = font.render(f'Score: {score}', True, score_color)
+    screen.blit(score_text, (5, 10))
+
+    pygame.display.update()
+    #pygame.time.wait(300)
+    clock.tick(30)
+
+pygame.quit()
+
+
+
